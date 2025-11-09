@@ -220,16 +220,32 @@ func TestEncodeOGG(t *testing.T) {
 		t.Fatalf("Failed to decode source file: %v", err)
 	}
 
-	// Encode to a new OGG file (should fail with unsupported error)
+	// Encode to a new OGG file
 	dstFilename := filepath.Join(os.TempDir(), "test_output.ogg")
 	defer os.Remove(dstFilename)
 
 	err = EncodeFile(audio, dstFilename)
-	if err == nil {
-		t.Fatal("Expected error for OGG encoding (not yet supported), got nil")
+	if err != nil {
+		t.Fatalf("Failed to encode OGG file: %v", err)
 	}
 
-	t.Logf("OGG encoding correctly returns unsupported error: %v", err)
+	// Verify the file was created
+	stat, err := os.Stat(dstFilename)
+	if err != nil {
+		t.Fatal("Encoded OGG file was not created")
+	}
+
+	// Verify the file has reasonable size (should be non-zero)
+	if stat.Size() == 0 {
+		t.Fatal("Encoded OGG file is empty")
+	}
+
+	t.Logf("OGG Encode test passed")
+	t.Logf("  NumChannels: %d", audio.NumChannels)
+	t.Logf("  SampleRate: %d", audio.SampleRate)
+	t.Logf("  BitDepth: %d", audio.BitDepth)
+	t.Logf("  Samples: %d", len(audio.Data[0]))
+	t.Logf("  Output file size: %.2f KB", float64(stat.Size())/1024)
 }
 
 func TestEncodeUnsupportedFormat(t *testing.T) {
