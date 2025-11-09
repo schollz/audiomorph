@@ -1,6 +1,6 @@
 module github.com/schollz/audiomorph
 
-go 1.25
+go 1.23
 
 require (
 	github.com/go-audio/aiff v1.1.0 // indirect
