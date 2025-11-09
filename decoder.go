@@ -19,7 +19,7 @@ type Audio struct {
 	NumChannels int
 	SampleRate  int
 	BitDepth    int
-	Data        []int
+	Data        [][]int // Data[channel][sample] - deinterlaced audio data
 	Duration    float64 // in seconds
 }
 
@@ -70,14 +70,21 @@ func decodeWAV(filename string) (*Audio, error) {
 		return nil, fmt.Errorf("failed to read PCM buffer: %w", err)
 	}
 
-	// Convert PCM data to []int
-	data := make([]int, len(buf.Data))
-	for i, v := range buf.Data {
-		data[i] = v
+	// Deinterlace PCM data from []int to [][]int
+	numChannels := int(format.NumChannels)
+	numSamples := len(buf.Data) / numChannels
+	data := make([][]int, numChannels)
+	for ch := 0; ch < numChannels; ch++ {
+		data[ch] = make([]int, numSamples)
+	}
+
+	for i := 0; i < len(buf.Data); i++ {
+		ch := i % numChannels
+		sample := i / numChannels
+		data[ch][sample] = buf.Data[i]
 	}
 
 	// Calculate duration
-	numSamples := len(data) / int(format.NumChannels)
 	duration := float64(numSamples) / float64(format.SampleRate)
 
 	return &Audio{
@@ -108,17 +115,22 @@ func decodeAIFF(filename string) (*Audio, error) {
 		return nil, fmt.Errorf("failed to read PCM buffer: %w", err)
 	}
 
-	// Convert PCM data to []int
-	data := make([]int, len(buf.Data))
-	for i, v := range buf.Data {
-		data[i] = v
+	// Deinterlace PCM data from []int to [][]int
+	format := buf.Format
+	numChannels := int(format.NumChannels)
+	numSamples := len(buf.Data) / numChannels
+	data := make([][]int, numChannels)
+	for ch := 0; ch < numChannels; ch++ {
+		data[ch] = make([]int, numSamples)
 	}
 
-	// Get format from the buffer
-	format := buf.Format
+	for i := 0; i < len(buf.Data); i++ {
+		ch := i % numChannels
+		sample := i / numChannels
+		data[ch][sample] = buf.Data[i]
+	}
 
 	// Calculate duration
-	numSamples := len(data) / int(format.NumChannels)
 	duration := float64(numSamples) / float64(format.SampleRate)
 
 	return &Audio{
@@ -186,8 +198,12 @@ func streamToAudio(streamer beep.StreamSeekCloser, format beep.Format) (*Audio, 
 	// Get the total number of samples
 	length := streamer.Len()
 
-	// Read all samples
-	data := make([]int, 0, length*format.NumChannels)
+	// Initialize deinterlaced data structure
+	numChannels := format.NumChannels
+	data := make([][]int, numChannels)
+	for ch := 0; ch < numChannels; ch++ {
+		data[ch] = make([]int, 0, length)
+	}
 
 	bufSize := 512
 	buf := make([][2]float64, bufSize)
@@ -200,14 +216,14 @@ func streamToAudio(streamer beep.StreamSeekCloser, format beep.Format) (*Audio, 
 		}
 
 		for i := 0; i < n; i++ {
-			for ch := 0; ch < format.NumChannels; ch++ {
+			for ch := 0; ch < numChannels; ch++ {
 				// Convert float64 [-1, 1] to int based on precision
 				sample := buf[i][ch]
 				// Scale by bit depth (precision is in bytes)
 				bitDepth := format.Precision * 8
 				maxVal := float64(int64(1) << uint(bitDepth-1))
 				intVal := int(sample * maxVal)
-				data = append(data, intVal)
+				data[ch] = append(data[ch], intVal)
 			}
 		}
 		totalRead += n
@@ -218,7 +234,7 @@ func streamToAudio(streamer beep.StreamSeekCloser, format beep.Format) (*Audio, 
 	}
 
 	// Calculate duration
-	numSamples := len(data) / format.NumChannels
+	numSamples := len(data[0])
 	duration := float64(numSamples) / float64(format.SampleRate)
 
 	return &Audio{

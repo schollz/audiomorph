@@ -31,6 +31,14 @@ func TestDecodeWAV(t *testing.T) {
 	if len(audio.Data) == 0 {
 		t.Error("Expected audio Data to be non-empty")
 	}
+	if len(audio.Data) != audio.NumChannels {
+		t.Errorf("Expected Data to have %d channels, got %d", audio.NumChannels, len(audio.Data))
+	}
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		if len(audio.Data[ch]) == 0 {
+			t.Errorf("Expected audio Data[%d] to be non-empty", ch)
+		}
+	}
 	if audio.Duration <= 0 {
 		t.Errorf("Expected Duration > 0, got %f", audio.Duration)
 	}
@@ -39,7 +47,7 @@ func TestDecodeWAV(t *testing.T) {
 	t.Logf("  NumChannels: %d", audio.NumChannels)
 	t.Logf("  SampleRate: %d", audio.SampleRate)
 	t.Logf("  BitDepth: %d", audio.BitDepth)
-	t.Logf("  Data length: %d samples", len(audio.Data))
+	t.Logf("  Data length: %d samples per channel", len(audio.Data[0]))
 	t.Logf("  Duration: %.2f seconds", audio.Duration)
 }
 
@@ -69,6 +77,14 @@ func TestDecodeAIFF(t *testing.T) {
 	if len(audio.Data) == 0 {
 		t.Error("Expected audio Data to be non-empty")
 	}
+	if len(audio.Data) != audio.NumChannels {
+		t.Errorf("Expected Data to have %d channels, got %d", audio.NumChannels, len(audio.Data))
+	}
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		if len(audio.Data[ch]) == 0 {
+			t.Errorf("Expected audio Data[%d] to be non-empty", ch)
+		}
+	}
 	if audio.Duration <= 0 {
 		t.Errorf("Expected Duration > 0, got %f", audio.Duration)
 	}
@@ -77,7 +93,7 @@ func TestDecodeAIFF(t *testing.T) {
 	t.Logf("  NumChannels: %d", audio.NumChannels)
 	t.Logf("  SampleRate: %d", audio.SampleRate)
 	t.Logf("  BitDepth: %d", audio.BitDepth)
-	t.Logf("  Data length: %d samples", len(audio.Data))
+	t.Logf("  Data length: %d samples per channel", len(audio.Data[0]))
 	t.Logf("  Duration: %.2f seconds", audio.Duration)
 }
 
@@ -107,6 +123,14 @@ func TestDecodeMP3(t *testing.T) {
 	if len(audio.Data) == 0 {
 		t.Error("Expected audio Data to be non-empty")
 	}
+	if len(audio.Data) != audio.NumChannels {
+		t.Errorf("Expected Data to have %d channels, got %d", audio.NumChannels, len(audio.Data))
+	}
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		if len(audio.Data[ch]) == 0 {
+			t.Errorf("Expected audio Data[%d] to be non-empty", ch)
+		}
+	}
 	if audio.Duration <= 0 {
 		t.Errorf("Expected Duration > 0, got %f", audio.Duration)
 	}
@@ -115,7 +139,7 @@ func TestDecodeMP3(t *testing.T) {
 	t.Logf("  NumChannels: %d", audio.NumChannels)
 	t.Logf("  SampleRate: %d", audio.SampleRate)
 	t.Logf("  BitDepth: %d", audio.BitDepth)
-	t.Logf("  Data length: %d samples", len(audio.Data))
+	t.Logf("  Data length: %d samples per channel", len(audio.Data[0]))
 	t.Logf("  Duration: %.2f seconds", audio.Duration)
 }
 
@@ -145,6 +169,14 @@ func TestDecodeOGG(t *testing.T) {
 	if len(audio.Data) == 0 {
 		t.Error("Expected audio Data to be non-empty")
 	}
+	if len(audio.Data) != audio.NumChannels {
+		t.Errorf("Expected Data to have %d channels, got %d", audio.NumChannels, len(audio.Data))
+	}
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		if len(audio.Data[ch]) == 0 {
+			t.Errorf("Expected audio Data[%d] to be non-empty", ch)
+		}
+	}
 	if audio.Duration <= 0 {
 		t.Errorf("Expected Duration > 0, got %f", audio.Duration)
 	}
@@ -153,7 +185,7 @@ func TestDecodeOGG(t *testing.T) {
 	t.Logf("  NumChannels: %d", audio.NumChannels)
 	t.Logf("  SampleRate: %d", audio.SampleRate)
 	t.Logf("  BitDepth: %d", audio.BitDepth)
-	t.Logf("  Data length: %d samples", len(audio.Data))
+	t.Logf("  Data length: %d samples per channel", len(audio.Data[0]))
 	t.Logf("  Duration: %.2f seconds", audio.Duration)
 }
 
@@ -183,6 +215,14 @@ func TestDecodeFLAC(t *testing.T) {
 	if len(audio.Data) == 0 {
 		t.Error("Expected audio Data to be non-empty")
 	}
+	if len(audio.Data) != audio.NumChannels {
+		t.Errorf("Expected Data to have %d channels, got %d", audio.NumChannels, len(audio.Data))
+	}
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		if len(audio.Data[ch]) == 0 {
+			t.Errorf("Expected audio Data[%d] to be non-empty", ch)
+		}
+	}
 	if audio.Duration <= 0 {
 		t.Errorf("Expected Duration > 0, got %f", audio.Duration)
 	}
@@ -191,7 +231,7 @@ func TestDecodeFLAC(t *testing.T) {
 	t.Logf("  NumChannels: %d", audio.NumChannels)
 	t.Logf("  SampleRate: %d", audio.SampleRate)
 	t.Logf("  BitDepth: %d", audio.BitDepth)
-	t.Logf("  Data length: %d samples", len(audio.Data))
+	t.Logf("  Data length: %d samples per channel", len(audio.Data[0]))
 	t.Logf("  Duration: %.2f seconds", audio.Duration)
 }
 
