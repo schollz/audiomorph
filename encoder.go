@@ -10,6 +10,7 @@ import (
 	"github.com/go-audio/aiff"
 	goaudio "github.com/go-audio/audio"
 	"github.com/go-audio/wav"
+	"github.com/schollz/goflac"
 )
 
 // EncodeFile encodes an Audio struct to a file based on the filename extension
@@ -26,7 +27,7 @@ func EncodeFile(audio *Audio, filename string) error {
 	case ".ogg":
 		return fmt.Errorf("OGG Vorbis encoding is not yet supported (OGG container library available but Vorbis codec encoder not available)")
 	case ".flac":
-		return fmt.Errorf("FLAC encoding is not yet supported (library available but encoder not implemented)")
+		return encodeFLAC(audio, filename)
 	default:
 		return fmt.Errorf("unsupported file format: %s", ext)
 	}
@@ -150,6 +151,38 @@ func encodeMP3(audio *Audio, filename string) error {
 	// Write MP3 data
 	if err := encoder.Write(f, int16Data); err != nil {
 		return fmt.Errorf("failed to write MP3 data: %w", err)
+	}
+
+	return nil
+}
+
+// encodeFLAC encodes audio data to a FLAC file
+func encodeFLAC(audio *Audio, filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create FLAC file: %w", err)
+	}
+	defer f.Close()
+
+	// Create FLAC encoder
+	encoder, err := goflac.NewEncoder(f, uint32(audio.SampleRate), uint8(audio.NumChannels), uint8(audio.BitDepth))
+	if err != nil {
+		return fmt.Errorf("failed to create FLAC encoder: %w", err)
+	}
+
+	// Convert audio data from [][]int to [][]int32
+	numSamples := len(audio.Data[0])
+	samples := make([][]int32, audio.NumChannels)
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		samples[ch] = make([]int32, numSamples)
+		for i := 0; i < numSamples; i++ {
+			samples[ch][i] = int32(audio.Data[ch][i])
+		}
+	}
+
+	// Encode samples
+	if err := encoder.Encode(samples); err != nil {
+		return fmt.Errorf("failed to encode FLAC data: %w", err)
 	}
 
 	return nil

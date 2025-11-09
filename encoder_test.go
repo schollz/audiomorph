@@ -141,6 +141,52 @@ func TestEncodeMP3(t *testing.T) {
 	t.Logf("  Samples: %d", len(decodedAudio.Data[0]))
 }
 
+func TestEncodeFLAC(t *testing.T) {
+	// Decode an existing audio file
+	srcFilename := filepath.Join("data", "wilhelm.flac")
+	audio, err := DecodeFile(srcFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode source file: %v", err)
+	}
+
+	// Encode to a new FLAC file
+	dstFilename := filepath.Join(os.TempDir(), "test_output.flac")
+	defer os.Remove(dstFilename)
+
+	err = EncodeFile(audio, dstFilename)
+	if err != nil {
+		t.Fatalf("Failed to encode FLAC file: %v", err)
+	}
+
+	// Verify the file was created
+	if _, err := os.Stat(dstFilename); os.IsNotExist(err) {
+		t.Fatal("Encoded FLAC file was not created")
+	}
+
+	// Decode the encoded file to verify it's valid
+	decodedAudio, err := DecodeFile(dstFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode encoded FLAC file: %v", err)
+	}
+
+	// Verify basic properties match
+	if decodedAudio.NumChannels != audio.NumChannels {
+		t.Errorf("NumChannels mismatch: expected %d, got %d", audio.NumChannels, decodedAudio.NumChannels)
+	}
+	if decodedAudio.SampleRate != audio.SampleRate {
+		t.Errorf("SampleRate mismatch: expected %d, got %d", audio.SampleRate, decodedAudio.SampleRate)
+	}
+	if decodedAudio.BitDepth != audio.BitDepth {
+		t.Errorf("BitDepth mismatch: expected %d, got %d", audio.BitDepth, decodedAudio.BitDepth)
+	}
+
+	t.Logf("FLAC Encode/Decode test passed")
+	t.Logf("  NumChannels: %d", decodedAudio.NumChannels)
+	t.Logf("  SampleRate: %d", decodedAudio.SampleRate)
+	t.Logf("  BitDepth: %d", decodedAudio.BitDepth)
+	t.Logf("  Samples: %d", len(decodedAudio.Data[0]))
+}
+
 func TestEncodeOGG(t *testing.T) {
 	// Decode an existing audio file
 	srcFilename := filepath.Join("data", "wilhelm.ogg")

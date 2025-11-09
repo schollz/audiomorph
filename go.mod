@@ -9,6 +9,7 @@ require (
 	github.com/go-audio/audio v1.0.0
 	github.com/go-audio/wav v1.1.0
 	github.com/mewkiz/flac v1.0.7
+	github.com/schollz/goflac v0.0.0-20251109053617-d000371d8097
 )
 
 require (
