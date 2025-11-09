@@ -42,22 +42,28 @@ func encodeWAV(audio *Audio, filename string) error {
 	}
 	defer f.Close()
 
+	// Determine number of channels (mono conversion if requested)
+	numChannels := audio.NumChannels
+	if audio.Mono {
+		numChannels = 1
+	}
+
 	// Create WAV encoder
-	encoder := wav.NewEncoder(f, audio.SampleRate, audio.BitDepth, audio.NumChannels, 1)
+	encoder := wav.NewEncoder(f, audio.SampleRate, audio.BitDepth, numChannels, 1)
 
 	// Interlace the audio data from [][]int to []int
 	numSamples := len(audio.Data[0])
-	interlacedData := make([]int, numSamples*audio.NumChannels)
+	interlacedData := make([]int, numSamples*numChannels)
 	for i := 0; i < numSamples; i++ {
-		for ch := 0; ch < audio.NumChannels; ch++ {
-			interlacedData[i*audio.NumChannels+ch] = audio.Data[ch][i]
+		for ch := 0; ch < numChannels; ch++ {
+			interlacedData[i*numChannels+ch] = audio.Data[ch][i]
 		}
 	}
 
 	// Create PCM buffer
 	buf := &goaudio.IntBuffer{
 		Format: &goaudio.Format{
-			NumChannels: audio.NumChannels,
+			NumChannels: numChannels,
 			SampleRate:  audio.SampleRate,
 		},
 		Data:           interlacedData,
@@ -85,22 +91,28 @@ func encodeAIFF(audio *Audio, filename string) error {
 	}
 	defer f.Close()
 
+	// Determine number of channels (mono conversion if requested)
+	numChannels := audio.NumChannels
+	if audio.Mono {
+		numChannels = 1
+	}
+
 	// Create AIFF encoder
-	encoder := aiff.NewEncoder(f, audio.SampleRate, audio.BitDepth, audio.NumChannels)
+	encoder := aiff.NewEncoder(f, audio.SampleRate, audio.BitDepth, numChannels)
 
 	// Interlace the audio data from [][]int to []int
 	numSamples := len(audio.Data[0])
-	interlacedData := make([]int, numSamples*audio.NumChannels)
+	interlacedData := make([]int, numSamples*numChannels)
 	for i := 0; i < numSamples; i++ {
-		for ch := 0; ch < audio.NumChannels; ch++ {
-			interlacedData[i*audio.NumChannels+ch] = audio.Data[ch][i]
+		for ch := 0; ch < numChannels; ch++ {
+			interlacedData[i*numChannels+ch] = audio.Data[ch][i]
 		}
 	}
 
 	// Create PCM buffer
 	buf := &goaudio.IntBuffer{
 		Format: &goaudio.Format{
-			NumChannels: audio.NumChannels,
+			NumChannels: numChannels,
 			SampleRate:  audio.SampleRate,
 		},
 		Data:           interlacedData,
@@ -128,24 +140,30 @@ func encodeMP3(audio *Audio, filename string) error {
 	}
 	defer f.Close()
 
+	// Determine number of channels (mono conversion if requested)
+	numChannels := audio.NumChannels
+	if audio.Mono {
+		numChannels = 1
+	}
+
 	// Create MP3 encoder
-	encoder := mp3.NewEncoder(audio.SampleRate, audio.NumChannels)
+	encoder := mp3.NewEncoder(audio.SampleRate, numChannels)
 
 	// Convert audio data to int16 format expected by MP3 encoder
 	numSamples := len(audio.Data[0])
 	// For MP3 encoding, we need interleaved int16 samples
-	int16Data := make([]int16, numSamples*audio.NumChannels)
+	int16Data := make([]int16, numSamples*numChannels)
 
 	// Convert and scale samples to int16 range
 	bitDepth := audio.BitDepth
 	scale := float64(1<<15) / float64(int64(1)<<uint(bitDepth-1))
 
 	for i := 0; i < numSamples; i++ {
-		for ch := 0; ch < audio.NumChannels; ch++ {
+		for ch := 0; ch < numChannels; ch++ {
 			sample := audio.Data[ch][i]
 			// Scale to int16 range
 			scaledSample := int16(float64(sample) * scale)
-			int16Data[i*audio.NumChannels+ch] = scaledSample
+			int16Data[i*numChannels+ch] = scaledSample
 		}
 	}
 
@@ -165,16 +183,22 @@ func encodeFLAC(audio *Audio, filename string) error {
 	}
 	defer f.Close()
 
+	// Determine number of channels (mono conversion if requested)
+	numChannels := audio.NumChannels
+	if audio.Mono {
+		numChannels = 1
+	}
+
 	// Create FLAC encoder
-	encoder, err := goflac.NewEncoder(f, uint32(audio.SampleRate), uint8(audio.NumChannels), uint8(audio.BitDepth))
+	encoder, err := goflac.NewEncoder(f, uint32(audio.SampleRate), uint8(numChannels), uint8(audio.BitDepth))
 	if err != nil {
 		return fmt.Errorf("failed to create FLAC encoder: %w", err)
 	}
 
 	// Convert audio data from [][]int to [][]int32
 	numSamples := len(audio.Data[0])
-	samples := make([][]int32, audio.NumChannels)
-	for ch := 0; ch < audio.NumChannels; ch++ {
+	samples := make([][]int32, numChannels)
+	for ch := 0; ch < numChannels; ch++ {
 		samples[ch] = make([]int32, numSamples)
 		for i := 0; i < numSamples; i++ {
 			samples[ch][i] = int32(audio.Data[ch][i])
@@ -197,15 +221,21 @@ func encodeOGG(audio *Audio, filename string) error {
 	}
 	defer f.Close()
 
+	// Determine number of channels (mono conversion if requested)
+	numChannels := audio.NumChannels
+	if audio.Mono {
+		numChannels = 1
+	}
+
 	// Create OGG encoder
-	encoder, err := govorbis.NewAudioEncoder(f, audio.SampleRate, audio.NumChannels)
+	encoder, err := govorbis.NewAudioEncoder(f, audio.SampleRate, numChannels)
 	if err != nil {
 		return fmt.Errorf("failed to create OGG encoder: %w", err)
 	}
 
 	// Convert audio data from [][]int to interleaved []float64
 	numSamples := len(audio.Data[0])
-	float64Data := make([]float64, numSamples*audio.NumChannels)
+	float64Data := make([]float64, numSamples*numChannels)
 
 	// Calculate the scale factor based on bit depth
 	bitDepth := audio.BitDepth
@@ -213,10 +243,10 @@ func encodeOGG(audio *Audio, filename string) error {
 
 	// Interlace and convert to float64 [-1.0, 1.0]
 	for i := 0; i < numSamples; i++ {
-		for ch := 0; ch < audio.NumChannels; ch++ {
+		for ch := 0; ch < numChannels; ch++ {
 			sample := audio.Data[ch][i]
 			// Normalize to [-1.0, 1.0]
-			float64Data[i*audio.NumChannels+ch] = float64(sample) / maxVal
+			float64Data[i*numChannels+ch] = float64(sample) / maxVal
 		}
 	}
 

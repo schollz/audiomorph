@@ -12,6 +12,10 @@ import (
 // Version is the version of the audiomorph utility
 var Version = "dev"
 
+var (
+	flagMono bool
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "audiomorph [input-file] [output-file]",
 	Short: "A utility for audio file transformation and analysis",
@@ -30,6 +34,7 @@ Supported formats: WAV, AIFF, MP3, OGG, FLAC (for input)
 
 func init() {
 	rootCmd.SetVersionTemplate(`{{printf "audiomorph version %s\n" .Version}}`)
+	rootCmd.Flags().BoolVar(&flagMono, "mono", false, "Convert to mono by using only the first channel")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -50,6 +55,11 @@ func run(cmd *cobra.Command, args []string) error {
 	if len(args) == 1 {
 		displayStatistics(inputFile, audio)
 		return nil
+	}
+
+	// Apply mono conversion if requested
+	if flagMono {
+		audio.Mono = true
 	}
 
 	// Transform audio to output file
