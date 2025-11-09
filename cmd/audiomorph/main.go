@@ -22,7 +22,7 @@ When provided with only an input file, it displays statistics about the audio fi
 When provided with both input and output files, it transforms the audio from one format to another.
 
 Supported formats: WAV, AIFF, MP3, OGG, FLAC (for input)
-                  WAV, AIFF, MP3 (for output)`,
+                  WAV, AIFF, MP3, OGG, FLAC (for output)`,
 	Version: Version,
 	Args:    cobra.RangeArgs(1, 2),
 	RunE:    run,
