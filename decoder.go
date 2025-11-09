@@ -2,12 +2,14 @@ package audiomorph
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-audio/aiff"
 	"github.com/go-audio/wav"
+	"github.com/hajimehoshi/go-mp3"
 )
 
 // Audio represents decoded audio data
@@ -19,7 +21,7 @@ type Audio struct {
 	Duration    float64 // in seconds
 }
 
-// DecodeFile decodes a WAV or AIF/AIFF file and returns an Audio struct
+// DecodeFile decodes a WAV, AIF/AIFF, or MP3 file and returns an Audio struct
 func DecodeFile(filename string) (*Audio, error) {
 	ext := strings.ToLower(filepath.Ext(filename))
 
@@ -28,6 +30,8 @@ func DecodeFile(filename string) (*Audio, error) {
 		return decodeWAV(filename)
 	case ".aif", ".aiff":
 		return decodeAIFF(filename)
+	case ".mp3":
+		return decodeMP3(filename)
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", ext)
 	}
@@ -116,6 +120,63 @@ func decodeAIFF(filename string) (*Audio, error) {
 		SampleRate:  int(format.SampleRate),
 		BitDepth:    int(decoder.BitDepth),
 		Data:        data,
+		Duration:    duration,
+	}, nil
+}
+
+// decodeMP3 decodes an MP3 file
+func decodeMP3(filename string) (*Audio, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open MP3 file: %w", err)
+	}
+	defer f.Close()
+
+	decoder, err := mp3.NewDecoder(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create MP3 decoder: %w", err)
+	}
+
+	// Get audio format
+	sampleRate := decoder.SampleRate()
+
+	// MP3 is typically 16-bit (but go-mp3 doesn't expose this directly)
+	bitDepth := 16
+
+	// Read all audio data
+	// The decoder returns interleaved PCM data as bytes
+	data := make([]byte, 0)
+	buf := make([]byte, 8192)
+	for {
+		n, err := decoder.Read(buf)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("failed to read MP3 data: %w", err)
+		}
+		if n == 0 {
+			break
+		}
+		data = append(data, buf[:n]...)
+	}
+
+	// Convert byte data to []int (16-bit samples, little-endian)
+	samples := make([]int, len(data)/2)
+	for i := 0; i < len(samples); i++ {
+		// Read 16-bit little-endian signed integer
+		sample := int(int16(data[i*2]) | int16(data[i*2+1])<<8)
+		samples[i] = sample
+	}
+
+	// Calculate duration and number of channels
+	// go-mp3 always outputs stereo (2 channels)
+	numChannels := 2
+	numSamples := len(samples) / numChannels
+	duration := float64(numSamples) / float64(sampleRate)
+
+	return &Audio{
+		NumChannels: numChannels,
+		SampleRate:  sampleRate,
+		BitDepth:    bitDepth,
+		Data:        samples,
 		Duration:    duration,
 	}, nil
 }
