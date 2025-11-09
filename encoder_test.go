@@ -16,6 +16,7 @@ func verifySoxCanReadFile(t *testing.T, filename string) {
 		t.Fatalf("Sox failed to read file %s: %v\nOutput: %s", filename, err, string(output))
 	}
 	t.Logf("Sox successfully verified file: %s", filename)
+	t.Logf("Sox output:\n%s", string(output))
 }
 
 func TestEncodeWAV(t *testing.T) {
@@ -200,6 +201,9 @@ func TestEncodeFLAC(t *testing.T) {
 	if decodedAudio.BitDepth != audio.BitDepth {
 		t.Errorf("BitDepth mismatch: expected %d, got %d", audio.BitDepth, decodedAudio.BitDepth)
 	}
+
+	// Verify that sox can read the encoded file
+	verifySoxCanReadFile(t, dstFilename)
 
 	t.Logf("FLAC Encode/Decode test passed")
 	t.Logf("  NumChannels: %d", decodedAudio.NumChannels)
