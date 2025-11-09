@@ -187,4 +187,3 @@ func encodeFLAC(audio *Audio, filename string) error {
 
 	return nil
 }
-
