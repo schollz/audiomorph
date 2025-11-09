@@ -2,9 +2,21 @@ package audiomorph
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
+
+// verifySoxCanReadFile verifies that sox can read the given audio file using "sox --i"
+func verifySoxCanReadFile(t *testing.T, filename string) {
+	t.Helper()
+	cmd := exec.Command("sox", "--i", filename)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Sox failed to read file %s: %v\nOutput: %s", filename, err, string(output))
+	}
+	t.Logf("Sox successfully verified file: %s", filename)
+}
 
 func TestEncodeWAV(t *testing.T) {
 	// Decode an existing audio file
@@ -44,6 +56,9 @@ func TestEncodeWAV(t *testing.T) {
 	if decodedAudio.BitDepth != audio.BitDepth {
 		t.Errorf("BitDepth mismatch: expected %d, got %d", audio.BitDepth, decodedAudio.BitDepth)
 	}
+
+	// Verify that sox can read the encoded file
+	verifySoxCanReadFile(t, dstFilename)
 
 	t.Logf("WAV Encode/Decode test passed")
 	t.Logf("  NumChannels: %d", decodedAudio.NumChannels)
@@ -91,6 +106,9 @@ func TestEncodeAIFF(t *testing.T) {
 		t.Errorf("BitDepth mismatch: expected %d, got %d", audio.BitDepth, decodedAudio.BitDepth)
 	}
 
+	// Verify that sox can read the encoded file
+	verifySoxCanReadFile(t, dstFilename)
+
 	t.Logf("AIFF Encode/Decode test passed")
 	t.Logf("  NumChannels: %d", decodedAudio.NumChannels)
 	t.Logf("  SampleRate: %d", decodedAudio.SampleRate)
@@ -133,6 +151,9 @@ func TestEncodeMP3(t *testing.T) {
 	if decodedAudio.SampleRate != audio.SampleRate {
 		t.Errorf("SampleRate mismatch: expected %d, got %d", audio.SampleRate, decodedAudio.SampleRate)
 	}
+
+	// Verify that sox can read the encoded file
+	verifySoxCanReadFile(t, dstFilename)
 
 	t.Logf("MP3 Encode/Decode test passed")
 	t.Logf("  NumChannels: %d", decodedAudio.NumChannels)
