@@ -14,8 +14,19 @@ import (
 	"github.com/schollz/govorbis"
 )
 
+// OptionUseChannels specifies which channels to use when encoding audio.
+func OptionUseChannels(channels []int) Option {
+	return func(a *Audio) {
+		a.useChannels = channels
+	}
+}
+
 // EncodeFile encodes an Audio struct to a file based on the filename extension
-func EncodeFile(audio *Audio, filename string) error {
+func EncodeFile(audio *Audio, filename string, options ...Option) error {
+	// Apply options
+	for _, option := range options {
+		option(audio)
+	}
 	ext := strings.ToLower(filepath.Ext(filename))
 
 	switch ext {
@@ -44,8 +55,9 @@ func encodeWAV(audio *Audio, filename string) error {
 
 	// Determine number of channels (mono conversion if requested)
 	numChannels := audio.NumChannels
-	if audio.Mono {
-		numChannels = 1
+	useChannels := audio.useChannels
+	if len(useChannels) > 0 {
+		numChannels = len(useChannels)
 	}
 
 	// Create WAV encoder
@@ -56,7 +68,12 @@ func encodeWAV(audio *Audio, filename string) error {
 	interlacedData := make([]int, numSamples*numChannels)
 	for i := 0; i < numSamples; i++ {
 		for ch := 0; ch < numChannels; ch++ {
-			interlacedData[i*numChannels+ch] = audio.Data[ch][i]
+			// Use the specified channel from useChannels, or original channel if not specified
+			sourceChannel := ch
+			if len(useChannels) > 0 {
+				sourceChannel = useChannels[ch]
+			}
+			interlacedData[i*numChannels+ch] = audio.Data[sourceChannel][i]
 		}
 	}
 
@@ -93,8 +110,8 @@ func encodeAIFF(audio *Audio, filename string) error {
 
 	// Determine number of channels (mono conversion if requested)
 	numChannels := audio.NumChannels
-	if audio.Mono {
-		numChannels = 1
+	if len(audio.useChannels) > 0 {
+		numChannels = len(audio.useChannels)
 	}
 
 	// Create AIFF encoder
@@ -103,9 +120,15 @@ func encodeAIFF(audio *Audio, filename string) error {
 	// Interlace the audio data from [][]int to []int
 	numSamples := len(audio.Data[0])
 	interlacedData := make([]int, numSamples*numChannels)
+	useChannels := audio.useChannels
 	for i := 0; i < numSamples; i++ {
 		for ch := 0; ch < numChannels; ch++ {
-			interlacedData[i*numChannels+ch] = audio.Data[ch][i]
+			// Use the specified channel from useChannels, or original channel if not specified
+			sourceChannel := ch
+			if len(useChannels) > 0 {
+				sourceChannel = useChannels[ch]
+			}
+			interlacedData[i*numChannels+ch] = audio.Data[sourceChannel][i]
 		}
 	}
 
@@ -142,8 +165,8 @@ func encodeMP3(audio *Audio, filename string) error {
 
 	// Determine number of channels (mono conversion if requested)
 	numChannels := audio.NumChannels
-	if audio.Mono {
-		numChannels = 1
+	if len(audio.useChannels) > 0 {
+		numChannels = len(audio.useChannels)
 	}
 
 	// Create MP3 encoder
@@ -157,10 +180,14 @@ func encodeMP3(audio *Audio, filename string) error {
 	// Convert and scale samples to int16 range
 	bitDepth := audio.BitDepth
 	scale := float64(1<<15) / float64(int64(1)<<uint(bitDepth-1))
-
+	useChannels := audio.useChannels
 	for i := 0; i < numSamples; i++ {
 		for ch := 0; ch < numChannels; ch++ {
-			sample := audio.Data[ch][i]
+			sourceChannel := ch
+			if len(useChannels) > 0 {
+				sourceChannel = useChannels[ch]
+			}
+			sample := audio.Data[sourceChannel][i]
 			// Scale to int16 range
 			scaledSample := int16(float64(sample) * scale)
 			int16Data[i*numChannels+ch] = scaledSample
@@ -185,8 +212,8 @@ func encodeFLAC(audio *Audio, filename string) error {
 
 	// Determine number of channels (mono conversion if requested)
 	numChannels := audio.NumChannels
-	if audio.Mono {
-		numChannels = 1
+	if len(audio.useChannels) > 0 {
+		numChannels = len(audio.useChannels)
 	}
 
 	// Create FLAC encoder
@@ -198,10 +225,15 @@ func encodeFLAC(audio *Audio, filename string) error {
 	// Convert audio data from [][]int to [][]int32
 	numSamples := len(audio.Data[0])
 	samples := make([][]int32, numChannels)
+	useChannels := audio.useChannels
 	for ch := 0; ch < numChannels; ch++ {
 		samples[ch] = make([]int32, numSamples)
 		for i := 0; i < numSamples; i++ {
-			samples[ch][i] = int32(audio.Data[ch][i])
+			sourceChannel := ch
+			if len(useChannels) > 0 {
+				sourceChannel = useChannels[ch]
+			}
+			samples[ch][i] = int32(audio.Data[sourceChannel][i])
 		}
 	}
 
@@ -223,9 +255,10 @@ func encodeOGG(audio *Audio, filename string) error {
 
 	// Determine number of channels (mono conversion if requested)
 	numChannels := audio.NumChannels
-	if audio.Mono {
-		numChannels = 1
+	if len(audio.useChannels) > 0 {
+		numChannels = len(audio.useChannels)
 	}
+	useChannels := audio.useChannels
 
 	// Create OGG encoder
 	encoder, err := govorbis.NewAudioEncoder(f, audio.SampleRate, numChannels)
@@ -244,7 +277,11 @@ func encodeOGG(audio *Audio, filename string) error {
 	// Interlace and convert to float64 [-1.0, 1.0]
 	for i := 0; i < numSamples; i++ {
 		for ch := 0; ch < numChannels; ch++ {
-			sample := audio.Data[ch][i]
+			sourceChannel := ch
+			if len(useChannels) > 0 {
+				sourceChannel = useChannels[ch]
+			}
+			sample := audio.Data[sourceChannel][i]
 			// Normalize to [-1.0, 1.0]
 			float64Data[i*numChannels+ch] = float64(sample) / maxVal
 		}
