@@ -14,16 +14,6 @@ import (
 	"github.com/mewkiz/flac"
 )
 
-// Audio represents decoded audio data
-type Audio struct {
-	NumChannels int
-	SampleRate  int
-	BitDepth    int
-	Data        [][]int // Data[channel][sample] - deinterlaced audio data
-	Duration    float64 // in seconds
-	Mono        bool    // If true, encode only the first channel as mono
-}
-
 // DecodeFile decodes a WAV, AIF/AIFF, MP3, OGG, or FLAC file and returns an Audio struct
 func DecodeFile(filename string) (*Audio, error) {
 	ext := strings.ToLower(filepath.Ext(filename))
