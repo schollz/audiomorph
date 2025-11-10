@@ -294,8 +294,8 @@ func TestSampleRateConversion(t *testing.T) {
 
 	// Test different target sample rates
 	testCases := []struct {
-		name               string
-		targetSampleRate   int
+		name                string
+		targetSampleRate    int
 		interpolationMethod string
 	}{
 		{"Upsample to 48kHz with linear", 48000, "linear"},
@@ -346,6 +346,9 @@ func TestSampleRateConversion(t *testing.T) {
 			t.Logf("Successfully converted sample rate from %d to %d Hz using %s interpolation",
 				originalSampleRate, tc.targetSampleRate, tc.interpolationMethod)
 			t.Logf("  Original samples: %d, New samples: %d", originalSamples, actualSamples)
+
+			// check that sox can read the encoded file
+			verifySoxCanReadFile(t, dstFilename)
 		})
 	}
 }
