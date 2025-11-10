@@ -279,3 +279,133 @@ func TestEncodeRightChannel(t *testing.T) {
 
 	t.Logf("Right channel encoding test passed")
 }
+
+func TestSampleRateConversion(t *testing.T) {
+	// Decode an existing audio file
+	srcFilename := filepath.Join("data", "wilhelm.wav")
+	audio, err := DecodeFile(srcFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode source file: %v", err)
+	}
+
+	originalSampleRate := audio.SampleRate
+	originalSamples := len(audio.Data[0])
+	t.Logf("Original sample rate: %d Hz, samples: %d", originalSampleRate, originalSamples)
+
+	// Test different target sample rates
+	testCases := []struct {
+		name               string
+		targetSampleRate   int
+		interpolationMethod string
+	}{
+		{"Upsample to 48kHz with linear", 48000, "linear"},
+		{"Downsample to 22.05kHz with linear", 22050, "linear"},
+		{"Upsample to 48kHz with cubic", 48000, "cubic"},
+		{"Downsample to 22.05kHz with hermite", 22050, "hermite"},
+		{"Upsample to 48kHz with lanczos3", 48000, "lanczos3"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Decode fresh audio for each test
+			audio, err := DecodeFile(srcFilename)
+			if err != nil {
+				t.Fatalf("Failed to decode source file: %v", err)
+			}
+
+			// Encode to a new WAV file with sample rate conversion
+			dstFilename := filepath.Join(os.TempDir(), "test_sample_rate_"+tc.interpolationMethod+".wav")
+			defer os.Remove(dstFilename)
+
+			err = EncodeFile(audio, dstFilename,
+				OptionSampleRate(tc.targetSampleRate),
+				OptionInterpolationMethod(tc.interpolationMethod))
+			if err != nil {
+				t.Fatalf("Failed to encode with sample rate conversion: %v", err)
+			}
+
+			// Decode the encoded file to verify the sample rate was converted
+			decodedAudio, err := DecodeFile(dstFilename)
+			if err != nil {
+				t.Fatalf("Failed to decode encoded file: %v", err)
+			}
+
+			// Verify the sample rate matches the target
+			if decodedAudio.SampleRate != tc.targetSampleRate {
+				t.Errorf("Sample rate mismatch: expected %d, got %d", tc.targetSampleRate, decodedAudio.SampleRate)
+			}
+
+			// Verify the number of samples is approximately correct (accounting for ratio)
+			expectedSamples := int(float64(originalSamples) * float64(tc.targetSampleRate) / float64(originalSampleRate))
+			actualSamples := len(decodedAudio.Data[0])
+			tolerance := int(float64(expectedSamples) * 0.01) // 1% tolerance
+			if actualSamples < expectedSamples-tolerance || actualSamples > expectedSamples+tolerance {
+				t.Errorf("Sample count mismatch: expected ~%d, got %d", expectedSamples, actualSamples)
+			}
+
+			t.Logf("Successfully converted sample rate from %d to %d Hz using %s interpolation",
+				originalSampleRate, tc.targetSampleRate, tc.interpolationMethod)
+			t.Logf("  Original samples: %d, New samples: %d", originalSamples, actualSamples)
+		})
+	}
+}
+
+func TestSampleRateConversionPreservesChannels(t *testing.T) {
+	// Decode an existing audio file
+	srcFilename := filepath.Join("data", "wilhelm.mp3")
+	audio, err := DecodeFile(srcFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode source file: %v", err)
+	}
+
+	originalChannels := audio.NumChannels
+	originalSampleRate := audio.SampleRate
+
+	// Encode with sample rate conversion
+	dstFilename := filepath.Join(os.TempDir(), "test_sample_rate_channels.wav")
+	defer os.Remove(dstFilename)
+
+	targetSampleRate := 48000
+	err = EncodeFile(audio, dstFilename, OptionSampleRate(targetSampleRate))
+	if err != nil {
+		t.Fatalf("Failed to encode with sample rate conversion: %v", err)
+	}
+
+	// Decode and verify
+	decodedAudio, err := DecodeFile(dstFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode encoded file: %v", err)
+	}
+
+	// Verify channels are preserved
+	if decodedAudio.NumChannels != originalChannels {
+		t.Errorf("Channel count mismatch: expected %d, got %d", originalChannels, decodedAudio.NumChannels)
+	}
+
+	// Verify sample rate was converted
+	if decodedAudio.SampleRate != targetSampleRate {
+		t.Errorf("Sample rate mismatch: expected %d, got %d", targetSampleRate, decodedAudio.SampleRate)
+	}
+
+	t.Logf("Sample rate conversion preserved %d channels", originalChannels)
+	t.Logf("Converted from %d Hz to %d Hz", originalSampleRate, targetSampleRate)
+}
+
+func TestInvalidInterpolationMethod(t *testing.T) {
+	// Create a simple audio structure
+	audio := &Audio{
+		NumChannels: 1,
+		SampleRate:  44100,
+		BitDepth:    16,
+		Data:        [][]int{{0, 100, 200, 300, 400}},
+		Duration:    0.0001,
+	}
+
+	// Try to convert with an invalid interpolation method
+	err := convertSampleRate(audio, 48000, "invalid_method")
+	if err == nil {
+		t.Fatal("Expected error for invalid interpolation method, got nil")
+	}
+
+	t.Logf("Invalid interpolation method correctly returns error: %v", err)
+}

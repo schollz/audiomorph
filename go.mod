@@ -10,6 +10,7 @@ require (
 	github.com/go-audio/wav v1.1.0
 	github.com/mewkiz/flac v1.0.13
 	github.com/schollz/goflac v0.1.0
+	github.com/schollz/interpolation v0.1.0
 )
 
 require (

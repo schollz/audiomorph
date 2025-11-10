@@ -13,7 +13,9 @@ import (
 var Version = "dev"
 
 var (
-	flagChannels []int
+	flagChannels      []int
+	flagSampleRate    int
+	flagInterpolation string
 )
 
 var rootCmd = &cobra.Command{
@@ -35,6 +37,8 @@ Supported formats: WAV, AIFF, MP3, OGG, FLAC (for input)
 func init() {
 	rootCmd.SetVersionTemplate(`{{printf "audiomorph version %s\n" .Version}}`)
 	rootCmd.Flags().IntSliceVar(&flagChannels, "channels", nil, "List of channel indices to process (e.g. --channels 0,1)")
+	rootCmd.Flags().IntVar(&flagSampleRate, "sample-rate", 0, "Target sample rate for output audio (e.g. --sample-rate 48000)")
+	rootCmd.Flags().StringVar(&flagInterpolation, "interpolation", "linear", "Interpolation method for sample rate conversion (linear, cubic, hermite, lanczos2, lanczos3, bspline3, bspline5, monotonic)")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -62,9 +66,16 @@ func run(cmd *cobra.Command, args []string) error {
 		optionChannels = audiomorph.OptionUseChannels(flagChannels)
 	}
 
+	// Prepare encoding options
+	options := []audiomorph.Option{optionChannels}
+	if flagSampleRate > 0 {
+		options = append(options, audiomorph.OptionSampleRate(flagSampleRate))
+		options = append(options, audiomorph.OptionInterpolationMethod(flagInterpolation))
+	}
+
 	// Transform audio to output file
 	outputFile := args[1]
-	if err := audiomorph.EncodeFile(audio, outputFile, optionChannels); err != nil {
+	if err := audiomorph.EncodeFile(audio, outputFile, options...); err != nil {
 		return fmt.Errorf("failed to encode output file: %w", err)
 	}
 

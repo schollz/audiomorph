@@ -11,6 +11,7 @@ import (
 	goaudio "github.com/go-audio/audio"
 	"github.com/go-audio/wav"
 	"github.com/schollz/goflac"
+	interpolators "github.com/schollz/interpolation"
 )
 
 // OptionUseChannels specifies which channels to use when encoding audio.
@@ -20,12 +21,107 @@ func OptionUseChannels(channels []int) Option {
 	}
 }
 
+// OptionSampleRate specifies the target sample rate for encoding audio.
+func OptionSampleRate(sampleRate int) Option {
+	return func(a *Audio) {
+		a.targetSampleRate = sampleRate
+	}
+}
+
+// OptionInterpolationMethod specifies the interpolation method to use for sample rate conversion.
+// Valid methods are: "linear", "cubic", "hermite", "lanczos2", "lanczos3", "bspline3", "bspline5", "monotonic"
+func OptionInterpolationMethod(method string) Option {
+	return func(a *Audio) {
+		a.interpolationMethod = method
+	}
+}
+
+// convertSampleRate converts audio data to a different sample rate using interpolation
+func convertSampleRate(audio *Audio, targetSampleRate int, method string) error {
+	// If no target sample rate is specified or it matches current, no conversion needed
+	if targetSampleRate == 0 || targetSampleRate == audio.SampleRate {
+		return nil
+	}
+
+	// Default to linear interpolation if not specified
+	if method == "" {
+		method = "linear"
+	}
+
+	// Calculate the new number of samples
+	numSamples := len(audio.Data[0])
+	ratio := float64(targetSampleRate) / float64(audio.SampleRate)
+	newNumSamples := int(float64(numSamples) * ratio)
+
+	// Map method string to interpolator type
+	var interpType interpolators.InterpolatorType
+	switch method {
+	case "linear":
+		interpType = interpolators.Linear
+	case "cubic":
+		interpType = interpolators.CubicSpline
+	case "hermite":
+		interpType = interpolators.Hermite4
+	case "lanczos2":
+		interpType = interpolators.Lanczos2
+	case "lanczos3":
+		interpType = interpolators.Lanczos3
+	case "bspline3":
+		interpType = interpolators.BSpline3
+	case "bspline5":
+		interpType = interpolators.BSpline5
+	case "monotonic":
+		interpType = interpolators.MonotonicCubic
+	default:
+		return fmt.Errorf("unsupported interpolation method: %s", method)
+	}
+
+	// Create new data array for resampled audio
+	newData := make([][]int, audio.NumChannels)
+
+	// Resample each channel
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		// Convert int samples to float64 for interpolation
+		inData := make([]float64, numSamples)
+		for i := 0; i < numSamples; i++ {
+			inData[i] = float64(audio.Data[ch][i])
+		}
+
+		// Perform interpolation
+		outData, err := interpolators.Interpolate(inData, newNumSamples, interpType)
+		if err != nil {
+			return fmt.Errorf("failed to interpolate channel %d: %w", ch, err)
+		}
+
+		// Convert float64 results back to int
+		newData[ch] = make([]int, newNumSamples)
+		for i := 0; i < newNumSamples; i++ {
+			newData[ch][i] = int(outData[i])
+		}
+	}
+
+	// Update the audio struct with resampled data
+	audio.Data = newData
+	audio.SampleRate = targetSampleRate
+	audio.Duration = float64(newNumSamples) / float64(targetSampleRate)
+
+	return nil
+}
+
 // EncodeFile encodes an Audio struct to a file based on the filename extension
 func EncodeFile(audio *Audio, filename string, options ...Option) error {
 	// Apply options
 	for _, option := range options {
 		option(audio)
 	}
+
+	// Apply sample rate conversion if specified
+	if audio.targetSampleRate > 0 && audio.targetSampleRate != audio.SampleRate {
+		if err := convertSampleRate(audio, audio.targetSampleRate, audio.interpolationMethod); err != nil {
+			return fmt.Errorf("failed to convert sample rate: %w", err)
+		}
+	}
+
 	ext := strings.ToLower(filepath.Ext(filename))
 
 	switch ext {

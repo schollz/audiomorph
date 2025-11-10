@@ -70,6 +70,18 @@ audiomorph input.flac output.mp3
 audiomorph input.wav output.aiff
 ```
 
+Convert sample rate during transformation:
+
+```bash
+# Upsample to 48kHz using linear interpolation (default)
+audiomorph input.wav output.wav --sample-rate 48000
+
+# Downsample to 22.05kHz using Lanczos3 interpolation
+audiomorph input.mp3 output.mp3 --sample-rate 22050 --interpolation lanczos3
+```
+
+Available interpolation methods: `linear` (default), `cubic`, `hermite`, `lanczos2`, `lanczos3`, `bspline3`, `bspline5`, `monotonic`
+
 ### Library Usage
 
 ```go
@@ -87,6 +99,14 @@ fmt.Printf("Sample rate: %d Hz\n", audio.SampleRate)
 
 // Encode to different format
 err = audiomorph.EncodeFile(audio, "output.wav")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Encode with sample rate conversion
+err = audiomorph.EncodeFile(audio, "output.wav",
+    audiomorph.OptionSampleRate(48000),
+    audiomorph.OptionInterpolationMethod("lanczos3"))
 if err != nil {
     log.Fatal(err)
 }
