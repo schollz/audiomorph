@@ -29,7 +29,7 @@ func OptionSampleRate(sampleRate int) Option {
 }
 
 // OptionInterpolationMethod specifies the interpolation method to use for sample rate conversion.
-// Valid methods are: "linear", "cubic", "hermite", "lanczos2", "lanczos3"
+// Valid methods are: "linear", "cubic", "hermite", "lanczos2", "lanczos3", "bspline3", "bspline5", "monotonic"
 func OptionInterpolationMethod(method string) Option {
 	return func(a *Audio) {
 		a.interpolationMethod = method
