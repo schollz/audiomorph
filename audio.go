@@ -2,12 +2,14 @@ package audiomorph
 
 // Audio represents decoded audio data
 type Audio struct {
-	NumChannels int
-	SampleRate  int
-	BitDepth    int
-	Data        [][]int // Data[channel][sample] - deinterlaced audio data
-	Duration    float64 // in seconds
-	useChannels []int
+	NumChannels         int
+	SampleRate          int
+	BitDepth            int
+	Data                [][]int // Data[channel][sample] - deinterlaced audio data
+	Duration            float64 // in seconds
+	useChannels         []int
+	targetSampleRate    int
+	interpolationMethod string
 }
 
 // Option is the type all options need to adhere to
