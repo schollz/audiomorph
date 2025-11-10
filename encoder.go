@@ -11,7 +11,6 @@ import (
 	goaudio "github.com/go-audio/audio"
 	"github.com/go-audio/wav"
 	"github.com/schollz/goflac"
-	"github.com/schollz/govorbis"
 )
 
 // OptionUseChannels specifies which channels to use when encoding audio.
@@ -36,8 +35,6 @@ func EncodeFile(audio *Audio, filename string, options ...Option) error {
 		return encodeAIFF(audio, filename)
 	case ".mp3":
 		return encodeMP3(audio, filename)
-	case ".ogg":
-		return encodeOGG(audio, filename)
 	case ".flac":
 		return encodeFLAC(audio, filename)
 	default:
@@ -240,61 +237,6 @@ func encodeFLAC(audio *Audio, filename string) error {
 	// Encode samples
 	if err := encoder.Encode(samples); err != nil {
 		return fmt.Errorf("failed to encode FLAC data: %w", err)
-	}
-
-	return nil
-}
-
-// encodeOGG encodes audio data to an OGG file
-func encodeOGG(audio *Audio, filename string) error {
-	f, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create OGG file: %w", err)
-	}
-	defer f.Close()
-
-	// Determine number of channels (mono conversion if requested)
-	numChannels := audio.NumChannels
-	if len(audio.useChannels) > 0 {
-		numChannels = len(audio.useChannels)
-	}
-	useChannels := audio.useChannels
-
-	// Create OGG encoder
-	encoder, err := govorbis.NewAudioEncoder(f, audio.SampleRate, numChannels)
-	if err != nil {
-		return fmt.Errorf("failed to create OGG encoder: %w", err)
-	}
-
-	// Convert audio data from [][]int to interleaved []float64
-	numSamples := len(audio.Data[0])
-	float64Data := make([]float64, numSamples*numChannels)
-
-	// Calculate the scale factor based on bit depth
-	bitDepth := audio.BitDepth
-	maxVal := float64(int64(1) << uint(bitDepth-1))
-
-	// Interlace and convert to float64 [-1.0, 1.0]
-	for i := 0; i < numSamples; i++ {
-		for ch := 0; ch < numChannels; ch++ {
-			sourceChannel := ch
-			if len(useChannels) > 0 {
-				sourceChannel = useChannels[ch]
-			}
-			sample := audio.Data[sourceChannel][i]
-			// Normalize to [-1.0, 1.0]
-			float64Data[i*numChannels+ch] = float64(sample) / maxVal
-		}
-	}
-
-	// Write audio data
-	if err := encoder.WriteAudio(float64Data); err != nil {
-		return fmt.Errorf("failed to write OGG data: %w", err)
-	}
-
-	// Close encoder
-	if err := encoder.Close(); err != nil {
-		return fmt.Errorf("failed to close OGG encoder: %w", err)
 	}
 
 	return nil

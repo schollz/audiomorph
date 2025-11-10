@@ -10,7 +10,6 @@ require (
 	github.com/go-audio/wav v1.1.0
 	github.com/mewkiz/flac v1.0.13
 	github.com/schollz/goflac v0.1.0
-	github.com/schollz/govorbis v0.0.0-20251109153616-1f3f82bece61
 )
 
 require (
