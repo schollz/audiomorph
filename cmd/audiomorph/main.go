@@ -13,7 +13,7 @@ import (
 var Version = "dev"
 
 var (
-	flagMono bool
+	flagChannels []int
 )
 
 var rootCmd = &cobra.Command{
@@ -34,7 +34,7 @@ Supported formats: WAV, AIFF, MP3, OGG, FLAC (for input)
 
 func init() {
 	rootCmd.SetVersionTemplate(`{{printf "audiomorph version %s\n" .Version}}`)
-	rootCmd.Flags().BoolVar(&flagMono, "mono", false, "Convert to mono by using only the first channel")
+	rootCmd.Flags().IntSliceVar(&flagChannels, "channels", nil, "List of channel indices to process (e.g. --channels 0,1)")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -57,14 +57,14 @@ func run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Apply mono conversion if requested
-	if flagMono {
-		audio.Mono = true
+	optionChannels := audiomorph.OptionUseChannels([]int{})
+	if len(flagChannels) > 0 {
+		optionChannels = audiomorph.OptionUseChannels(flagChannels)
 	}
 
 	// Transform audio to output file
 	outputFile := args[1]
-	if err := audiomorph.EncodeFile(audio, outputFile); err != nil {
+	if err := audiomorph.EncodeFile(audio, outputFile, optionChannels); err != nil {
 		return fmt.Errorf("failed to encode output file: %w", err)
 	}
 
@@ -82,7 +82,7 @@ func displayStatistics(filename string, audio *audiomorph.Audio) {
 	fmt.Printf("Bit Depth:    %d bits\n", audio.BitDepth)
 	fmt.Printf("Duration:     %.2f seconds\n", audio.Duration)
 	fmt.Printf("Samples:      %d per channel\n", len(audio.Data[0]))
-	
+
 	// Calculate file size
 	fileInfo, err := os.Stat(filename)
 	if err == nil {
