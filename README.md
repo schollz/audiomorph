@@ -20,7 +20,6 @@ This project is grateful for and depends on these excellent Go libraries:
 - [go-audio/aiff](https://github.com/go-audio/aiff) - AIFF file encoding/decoding
 - [mewkiz/flac](https://github.com/mewkiz/flac) - FLAC file decoding
 - [schollz/goflac](https://github.com/schollz/goflac) - FLAC file encoding
-- [schollz/govorbis](https://github.com/schollz/govorbis) - OGG Vorbis file encoding
 - [braheezy/shine-mp3](https://github.com/braheezy/shine-mp3) - MP3 file encoding
 
 ## API
