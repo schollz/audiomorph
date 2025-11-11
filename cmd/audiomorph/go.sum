@@ -52,8 +52,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/schollz/goflac v0.1.0 h1:thg0Vu9rf6CkAHKCVsoUSNqGpLlkxwpXtsTTqZqo94I=
 github.com/schollz/goflac v0.1.0/go.mod h1:MNS9dtgk0C+QAgn6G0zUlDM8ke9o++lGUArGy9HmkeY=
-github.com/schollz/interpolation v0.1.0 h1:hQusGbANfN2xru9So6LNo3mq1US5amtxx7vB0dvHJzM=
-github.com/schollz/interpolation v0.1.0/go.mod h1:ZN8yY9RnuOLoeO9lKQIt36c3GR0lc1KT1hxbKXLlzNM=
+github.com/schollz/interpolation v1.0.0 h1:4CEMbFahOPO+RNbXHMMNwAKs7H8JQ3qQmZaCfNTkCH0=
+github.com/schollz/interpolation v1.0.0/go.mod h1:ENVxqB6xhiTQ3C1KlVljZcb041UrbvLypY48TkSaaT0=
 github.com/spf13/cobra v1.10.1 h1:lJeBwCfmrnXthfAupyUTzJ/J4Nc1RsHC/mSRU2dll/s=
 github.com/spf13/cobra v1.10.1/go.mod h1:7SmJGaTHFVBY0jW4NXGluQoLvhqFQM+6XSKD+P4XaB0=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=

@@ -129,7 +129,7 @@ func TestEncodeMP3(t *testing.T) {
 	dstFilename := filepath.Join(os.TempDir(), "test_output.mp3")
 	defer os.Remove(dstFilename)
 
-	err = EncodeFile(audio, dstFilename)
+	err = EncodeFile(audio, dstFilename, OptionSampleRate(22000))
 	if err != nil {
 		t.Fatalf("Failed to encode MP3 file: %v", err)
 	}
