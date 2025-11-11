@@ -115,14 +115,28 @@ func EncodeFile(audio *Audio, filename string, options ...Option) error {
 		option(audio)
 	}
 
+	ext := strings.ToLower(filepath.Ext(filename))
+
+	// For MP3 files, ensure the sample rate is supported
+	if ext == ".mp3" {
+		// If a target sample rate was specified, adjust it to nearest supported rate
+		if audio.targetSampleRate > 0 {
+			audio.targetSampleRate = findNearestSupportedMP3SampleRate(audio.targetSampleRate)
+		} else {
+			// If no target sample rate, but current rate is unsupported, adjust to nearest
+			supportedRate := findNearestSupportedMP3SampleRate(audio.SampleRate)
+			if supportedRate != audio.SampleRate {
+				audio.targetSampleRate = supportedRate
+			}
+		}
+	}
+
 	// Apply sample rate conversion if specified
 	if audio.targetSampleRate > 0 && audio.targetSampleRate != audio.SampleRate {
 		if err := convertSampleRate(audio, audio.targetSampleRate, audio.interpolationMethod); err != nil {
 			return fmt.Errorf("failed to convert sample rate: %w", err)
 		}
 	}
-
-	ext := strings.ToLower(filepath.Ext(filename))
 
 	switch ext {
 	case ".wav":
@@ -248,6 +262,45 @@ func encodeAIFF(audio *Audio, filename string) error {
 	return nil
 }
 
+// supportedMP3SampleRates lists all sample rates supported by the MP3 encoder
+var supportedMP3SampleRates = []int{
+	44100, 48000, 32000, // MPEG-1
+	22050, 24000, 16000, // MPEG-2
+	11025, 12000, 8000,  // MPEG-2.5
+}
+
+// findNearestSupportedMP3SampleRate returns the nearest supported MP3 sample rate
+func findNearestSupportedMP3SampleRate(sampleRate int) int {
+	// Check if already supported
+	for _, supported := range supportedMP3SampleRates {
+		if sampleRate == supported {
+			return sampleRate
+		}
+	}
+
+	// Find the nearest supported rate
+	nearestRate := supportedMP3SampleRates[0]
+	minDiff := abs(sampleRate - nearestRate)
+
+	for _, supported := range supportedMP3SampleRates[1:] {
+		diff := abs(sampleRate - supported)
+		if diff < minDiff {
+			minDiff = diff
+			nearestRate = supported
+		}
+	}
+
+	return nearestRate
+}
+
+// abs returns the absolute value of an integer
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
 // encodeMP3 encodes audio data to an MP3 file
 func encodeMP3(audio *Audio, filename string) error {
 	f, err := os.Create(filename)
@@ -262,7 +315,7 @@ func encodeMP3(audio *Audio, filename string) error {
 		numChannels = len(audio.useChannels)
 	}
 
-	// Create MP3 encoder
+	// Create MP3 encoder - sample rate should already be converted to a supported rate by EncodeFile
 	encoder := mp3.NewEncoder(audio.SampleRate, numChannels)
 
 	// Convert audio data to int16 format expected by MP3 encoder
