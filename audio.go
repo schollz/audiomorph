@@ -9,6 +9,7 @@ type Audio struct {
 	Duration            float64 // in seconds
 	useChannels         []int
 	targetSampleRate    int
+	targetBitDepth      int
 	interpolationMethod string
 }
 

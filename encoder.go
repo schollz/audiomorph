@@ -36,6 +36,13 @@ func OptionInterpolationMethod(method string) Option {
 	}
 }
 
+// OptionBitDepth specifies the target bit depth for encoding audio.
+func OptionBitDepth(bitDepth int) Option {
+	return func(a *Audio) {
+		a.targetBitDepth = bitDepth
+	}
+}
+
 // convertSampleRate converts audio data to a different sample rate using interpolation
 func convertSampleRate(audio *Audio, targetSampleRate int, method string) error {
 	// If no target sample rate is specified or it matches current, no conversion needed
@@ -108,6 +115,59 @@ func convertSampleRate(audio *Audio, targetSampleRate int, method string) error 
 	return nil
 }
 
+// convertBitDepth converts audio data to a different bit depth
+func convertBitDepth(audio *Audio, targetBitDepth int) error {
+	// If no target bit depth is specified or it matches current, no conversion needed
+	if targetBitDepth == 0 || targetBitDepth == audio.BitDepth {
+		return nil
+	}
+
+	// Validate target bit depth
+	if targetBitDepth != 8 && targetBitDepth != 16 && targetBitDepth != 24 && targetBitDepth != 32 {
+		return fmt.Errorf("unsupported bit depth: %d (must be 8, 16, 24, or 32)", targetBitDepth)
+	}
+
+	sourceBitDepth := audio.BitDepth
+	
+	// Calculate scaling factor
+	// When converting bit depth, we need to scale the sample values
+	// For example, 16-bit samples range from -32768 to 32767
+	// and 24-bit samples range from -8388608 to 8388607
+	var scale float64
+	if targetBitDepth > sourceBitDepth {
+		// Upscaling: multiply by 2^(targetBitDepth - sourceBitDepth)
+		scale = float64(int64(1) << uint(targetBitDepth-sourceBitDepth))
+	} else {
+		// Downscaling: divide by 2^(sourceBitDepth - targetBitDepth)
+		scale = 1.0 / float64(int64(1)<<uint(sourceBitDepth-targetBitDepth))
+	}
+
+	// Convert each channel
+	for ch := 0; ch < audio.NumChannels; ch++ {
+		for i := 0; i < len(audio.Data[ch]); i++ {
+			// Scale the sample value
+			scaledValue := float64(audio.Data[ch][i]) * scale
+			
+			// Clamp to target bit depth range
+			maxVal := int64(1)<<uint(targetBitDepth-1) - 1
+			minVal := -int64(1) << uint(targetBitDepth-1)
+			
+			if scaledValue > float64(maxVal) {
+				audio.Data[ch][i] = int(maxVal)
+			} else if scaledValue < float64(minVal) {
+				audio.Data[ch][i] = int(minVal)
+			} else {
+				audio.Data[ch][i] = int(scaledValue)
+			}
+		}
+	}
+
+	// Update the bit depth
+	audio.BitDepth = targetBitDepth
+
+	return nil
+}
+
 // EncodeFile encodes an Audio struct to a file based on the filename extension
 func EncodeFile(audio *Audio, filename string, options ...Option) error {
 	// Apply options
@@ -119,6 +179,13 @@ func EncodeFile(audio *Audio, filename string, options ...Option) error {
 	if audio.targetSampleRate > 0 && audio.targetSampleRate != audio.SampleRate {
 		if err := convertSampleRate(audio, audio.targetSampleRate, audio.interpolationMethod); err != nil {
 			return fmt.Errorf("failed to convert sample rate: %w", err)
+		}
+	}
+
+	// Apply bit depth conversion if specified
+	if audio.targetBitDepth > 0 && audio.targetBitDepth != audio.BitDepth {
+		if err := convertBitDepth(audio, audio.targetBitDepth); err != nil {
+			return fmt.Errorf("failed to convert bit depth: %w", err)
 		}
 	}
 

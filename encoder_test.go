@@ -1,6 +1,7 @@
 package audiomorph
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -411,4 +412,166 @@ func TestInvalidInterpolationMethod(t *testing.T) {
 	}
 
 	t.Logf("Invalid interpolation method correctly returns error: %v", err)
+}
+
+func TestBitDepthConversion(t *testing.T) {
+	// Decode an existing audio file
+	srcFilename := filepath.Join("data", "wilhelm.wav")
+	audio, err := DecodeFile(srcFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode source file: %v", err)
+	}
+
+	originalBitDepth := audio.BitDepth
+	originalSamples := len(audio.Data[0])
+	t.Logf("Original bit depth: %d bits, samples: %d", originalBitDepth, originalSamples)
+
+	// Test different target bit depths
+	testCases := []struct {
+		name           string
+		targetBitDepth int
+	}{
+		{"Convert to 8-bit", 8},
+		{"Convert to 24-bit", 24},
+		{"Convert to 32-bit", 32},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Decode fresh audio for each test
+			audio, err := DecodeFile(srcFilename)
+			if err != nil {
+				t.Fatalf("Failed to decode source file: %v", err)
+			}
+
+			// Encode to a new WAV file with bit depth conversion
+			dstFilename := filepath.Join(os.TempDir(), fmt.Sprintf("test_bitdepth_%d.wav", tc.targetBitDepth))
+			defer os.Remove(dstFilename)
+
+			err = EncodeFile(audio, dstFilename, OptionBitDepth(tc.targetBitDepth))
+			if err != nil {
+				t.Fatalf("Failed to encode with bit depth conversion: %v", err)
+			}
+
+			// Decode the encoded file to verify the bit depth was converted
+			decodedAudio, err := DecodeFile(dstFilename)
+			if err != nil {
+				t.Fatalf("Failed to decode encoded file: %v", err)
+			}
+
+			// Verify the bit depth matches the target
+			if decodedAudio.BitDepth != tc.targetBitDepth {
+				t.Errorf("Bit depth mismatch: expected %d, got %d", tc.targetBitDepth, decodedAudio.BitDepth)
+			}
+
+			// Verify the number of samples is preserved
+			if len(decodedAudio.Data[0]) != originalSamples {
+				t.Errorf("Sample count mismatch: expected %d, got %d", originalSamples, len(decodedAudio.Data[0]))
+			}
+
+			t.Logf("Successfully converted bit depth from %d to %d bits", originalBitDepth, tc.targetBitDepth)
+		})
+	}
+}
+
+func TestBitDepthConversionPreservesChannels(t *testing.T) {
+	// Decode an existing audio file
+	srcFilename := filepath.Join("data", "wilhelm.mp3")
+	audio, err := DecodeFile(srcFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode source file: %v", err)
+	}
+
+	originalChannels := audio.NumChannels
+	originalBitDepth := audio.BitDepth
+
+	// Encode with bit depth conversion
+	dstFilename := filepath.Join(os.TempDir(), "test_bitdepth_channels.wav")
+	defer os.Remove(dstFilename)
+
+	targetBitDepth := 24
+	err = EncodeFile(audio, dstFilename, OptionBitDepth(targetBitDepth))
+	if err != nil {
+		t.Fatalf("Failed to encode with bit depth conversion: %v", err)
+	}
+
+	// Decode and verify
+	decodedAudio, err := DecodeFile(dstFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode encoded file: %v", err)
+	}
+
+	// Verify channels are preserved
+	if decodedAudio.NumChannels != originalChannels {
+		t.Errorf("Channel count mismatch: expected %d, got %d", originalChannels, decodedAudio.NumChannels)
+	}
+
+	// Verify bit depth was converted
+	if decodedAudio.BitDepth != targetBitDepth {
+		t.Errorf("Bit depth mismatch: expected %d, got %d", targetBitDepth, decodedAudio.BitDepth)
+	}
+
+	t.Logf("Bit depth conversion preserved %d channels", originalChannels)
+	t.Logf("Converted from %d bits to %d bits", originalBitDepth, targetBitDepth)
+}
+
+func TestInvalidBitDepth(t *testing.T) {
+	// Create a simple audio structure
+	audio := &Audio{
+		NumChannels: 1,
+		SampleRate:  44100,
+		BitDepth:    16,
+		Data:        [][]int{{0, 100, 200, 300, 400}},
+		Duration:    0.0001,
+	}
+
+	// Try to convert with an invalid bit depth
+	err := convertBitDepth(audio, 12)
+	if err == nil {
+		t.Fatal("Expected error for invalid bit depth, got nil")
+	}
+
+	t.Logf("Invalid bit depth correctly returns error: %v", err)
+}
+
+func TestBitDepthAndSampleRateConversion(t *testing.T) {
+	// Test combining both bit depth and sample rate conversions
+	srcFilename := filepath.Join("data", "wilhelm.wav")
+	audio, err := DecodeFile(srcFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode source file: %v", err)
+	}
+
+	originalBitDepth := audio.BitDepth
+	originalSampleRate := audio.SampleRate
+
+	// Encode with both conversions
+	dstFilename := filepath.Join(os.TempDir(), "test_combined_conversion.wav")
+	defer os.Remove(dstFilename)
+
+	targetBitDepth := 24
+	targetSampleRate := 48000
+	err = EncodeFile(audio, dstFilename,
+		OptionBitDepth(targetBitDepth),
+		OptionSampleRate(targetSampleRate))
+	if err != nil {
+		t.Fatalf("Failed to encode with combined conversion: %v", err)
+	}
+
+	// Decode and verify
+	decodedAudio, err := DecodeFile(dstFilename)
+	if err != nil {
+		t.Fatalf("Failed to decode encoded file: %v", err)
+	}
+
+	// Verify both conversions were applied
+	if decodedAudio.BitDepth != targetBitDepth {
+		t.Errorf("Bit depth mismatch: expected %d, got %d", targetBitDepth, decodedAudio.BitDepth)
+	}
+	if decodedAudio.SampleRate != targetSampleRate {
+		t.Errorf("Sample rate mismatch: expected %d, got %d", targetSampleRate, decodedAudio.SampleRate)
+	}
+
+	t.Logf("Successfully converted from %d bits @ %d Hz to %d bits @ %d Hz",
+		originalBitDepth, originalSampleRate, targetBitDepth, targetSampleRate)
 }

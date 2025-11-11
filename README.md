@@ -82,6 +82,21 @@ audiomorph input.mp3 output.mp3 --sample-rate 22050 --interpolation lanczos3
 
 Available interpolation methods: `linear` (default), `cubic`, `hermite`, `lanczos2`, `lanczos3`, `bspline3`, `bspline5`, `monotonic`
 
+Convert bit depth during transformation:
+
+```bash
+# Convert to 24-bit audio
+audiomorph input.wav output.wav --bit-depth 24
+
+# Convert to 8-bit audio
+audiomorph input.flac output.wav --bit-depth 8
+
+# Combine bit depth and sample rate conversion
+audiomorph input.mp3 output.wav --bit-depth 24 --sample-rate 48000
+```
+
+Supported bit depths: `8`, `16`, `24`, `32`
+
 ### Library Usage
 
 ```go
@@ -107,6 +122,21 @@ if err != nil {
 err = audiomorph.EncodeFile(audio, "output.wav",
     audiomorph.OptionSampleRate(48000),
     audiomorph.OptionInterpolationMethod("lanczos3"))
+if err != nil {
+    log.Fatal(err)
+}
+
+// Encode with bit depth conversion
+err = audiomorph.EncodeFile(audio, "output.wav",
+    audiomorph.OptionBitDepth(24))
+if err != nil {
+    log.Fatal(err)
+}
+
+// Encode with both sample rate and bit depth conversion
+err = audiomorph.EncodeFile(audio, "output.wav",
+    audiomorph.OptionSampleRate(48000),
+    audiomorph.OptionBitDepth(24))
 if err != nil {
     log.Fatal(err)
 }

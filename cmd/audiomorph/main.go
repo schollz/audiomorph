@@ -15,6 +15,7 @@ var Version = "dev"
 var (
 	flagChannels      []int
 	flagSampleRate    int
+	flagBitDepth      int
 	flagInterpolation string
 )
 
@@ -38,6 +39,7 @@ func init() {
 	rootCmd.SetVersionTemplate(`{{printf "audiomorph version %s\n" .Version}}`)
 	rootCmd.Flags().IntSliceVar(&flagChannels, "channels", nil, "List of channel indices to process (e.g. --channels 0,1)")
 	rootCmd.Flags().IntVar(&flagSampleRate, "sample-rate", 0, "Target sample rate for output audio (e.g. --sample-rate 48000)")
+	rootCmd.Flags().IntVar(&flagBitDepth, "bit-depth", 0, "Target bit depth for output audio (e.g. --bit-depth 24)")
 	rootCmd.Flags().StringVar(&flagInterpolation, "interpolation", "linear", "Interpolation method for sample rate conversion (linear, cubic, hermite, lanczos2, lanczos3, bspline3, bspline5, monotonic)")
 }
 
@@ -71,6 +73,9 @@ func run(cmd *cobra.Command, args []string) error {
 	if flagSampleRate > 0 {
 		options = append(options, audiomorph.OptionSampleRate(flagSampleRate))
 		options = append(options, audiomorph.OptionInterpolationMethod(flagInterpolation))
+	}
+	if flagBitDepth > 0 {
+		options = append(options, audiomorph.OptionBitDepth(flagBitDepth))
 	}
 
 	// Transform audio to output file
