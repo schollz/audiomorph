@@ -205,8 +205,6 @@ func EncodeFile(audio *Audio, filename string, options ...Option) error {
 		}
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
-
 	switch ext {
 	case ".wav":
 		return encodeWAV(audio, filename)
